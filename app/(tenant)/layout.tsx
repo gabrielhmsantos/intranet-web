@@ -1,8 +1,7 @@
 import { enforceTenantAccess } from "@/lib/route-guard";
-import {
-  getDevSession,
-  getEffectiveTenantRole,
-} from "@/lib/dev-session";
+import { getServerSession } from "@/lib/session";
+import { getEffectiveTenantRole } from "@/lib/dev-session";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { TenantShell } from "@/components/shell/tenant-shell";
 
 export default async function TenantLayout({
@@ -11,11 +10,17 @@ export default async function TenantLayout({
   children: React.ReactNode;
 }) {
   await enforceTenantAccess();
-  const session = await getDevSession();
-  const role = await getEffectiveTenantRole();
+  const session = await getServerSession();
+  const role = isSupabaseConfigured()
+    ? session.role
+    : await getEffectiveTenantRole();
 
   return (
-    <TenantShell tenantName={session.tenantDisplayName} role={role}>
+    <TenantShell
+      tenantName={session.tenantName}
+      role={role}
+      useSupabaseAuth={isSupabaseConfigured()}
+    >
       {children}
     </TenantShell>
   );

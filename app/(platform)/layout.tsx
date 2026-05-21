@@ -1,5 +1,6 @@
 import { enforcePlatformAccess } from "@/lib/route-guard";
-import { getDevSession, normalizeDevRole } from "@/lib/dev-session";
+import { getServerSession } from "@/lib/session";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { PlatformShell } from "@/components/shell/platform-shell";
 
 export default async function PlatformLayout({
@@ -8,8 +9,14 @@ export default async function PlatformLayout({
   children: React.ReactNode;
 }) {
   await enforcePlatformAccess();
-  const session = await getDevSession();
-  const role = normalizeDevRole(session.role);
+  const session = await getServerSession();
 
-  return <PlatformShell role={role}>{children}</PlatformShell>;
+  return (
+    <PlatformShell
+      role={session.role}
+      useSupabaseAuth={isSupabaseConfigured()}
+    >
+      {children}
+    </PlatformShell>
+  );
 }

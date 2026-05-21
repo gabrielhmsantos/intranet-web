@@ -5,10 +5,15 @@ import type { ProductRole } from "@/lib/roles";
 
 type PlatformShellProps = {
   role: ProductRole;
+  useSupabaseAuth?: boolean;
   children: React.ReactNode;
 };
 
-export function PlatformShell({ role, children }: PlatformShellProps) {
+export function PlatformShell({
+  role,
+  useSupabaseAuth = false,
+  children,
+}: PlatformShellProps) {
   return (
     <div className="flex min-h-full flex-col" data-testid="platform-shell">
       <header className="flex h-14 items-center justify-between border-b px-4 md:px-6">
@@ -29,7 +34,7 @@ export function PlatformShell({ role, children }: PlatformShellProps) {
           {process.env.NODE_ENV === "development" ? (
             <DevRoleSwitcher currentRole={role} />
           ) : null}
-          <UserMenu />
+          <UserMenu useSupabaseAuth={useSupabaseAuth} />
         </div>
       </header>
       <main className="flex flex-1 flex-col gap-4 p-4 md:p-6">{children}</main>

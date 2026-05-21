@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
-import { getDevSession } from "@/lib/dev-session";
+import { getServerSession } from "@/lib/session";
 import { getGatewayRedirect } from "@/lib/redirects";
 
 export default async function GatewayPage() {
-  const session = await getDevSession();
+  const session = await getServerSession();
   redirect(getGatewayRedirect(session));
 }

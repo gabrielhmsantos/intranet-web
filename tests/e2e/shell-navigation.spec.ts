@@ -1,4 +1,9 @@
 import { test, expect } from "@playwright/test";
+import {
+  authenticateAs,
+  hasSupabase,
+  loginSupabase,
+} from "./helpers/supabase-auth";
 
 const DEV_AUTH = "dev_auth";
 const DEV_ROLE = "dev_role";
@@ -24,12 +29,17 @@ async function setDevCookies(
 test.describe("gateway redirects", () => {
   test("unauthenticated GET / → /login", async ({ page }) => {
     await page.goto("/", { waitUntil: "domcontentloaded" });
-    await expect(page).toHaveURL(/\/login$/);
+    await expect(page).toHaveURL(/\/login/);
   });
 
   test("tenant session GET / → /dashboard", async ({ page, context }) => {
-    await setDevCookies(context, "employee");
-    await page.goto("/", { waitUntil: "domcontentloaded" });
+    if (hasSupabase) {
+      await loginSupabase(page, "employee@alpha-dev.test");
+      await page.goto("/", { waitUntil: "domcontentloaded" });
+    } else {
+      await setDevCookies(context, "employee");
+      await page.goto("/", { waitUntil: "domcontentloaded" });
+    }
     await expect(page).toHaveURL(/\/dashboard$/);
   });
 
@@ -37,14 +47,27 @@ test.describe("gateway redirects", () => {
     page,
     context,
   }) => {
-    await setDevCookies(context, "platform_admin");
-    await page.goto("/", { waitUntil: "domcontentloaded" });
+    if (hasSupabase) {
+      await loginSupabase(
+        page,
+        "platform@intranet-dev.test",
+        /\/plataforma\/dashboard$/,
+      );
+      await page.goto("/", { waitUntil: "domcontentloaded" });
+    } else {
+      await setDevCookies(context, "platform_admin");
+      await page.goto("/", { waitUntil: "domcontentloaded" });
+    }
     await expect(page).toHaveURL(/\/plataforma\/dashboard$/);
   });
 
   test("tenant session GET /login → /dashboard", async ({ page, context }) => {
-    await setDevCookies(context, "employee");
-    await page.goto("/login", { waitUntil: "domcontentloaded" });
+    if (hasSupabase) {
+      await loginSupabase(page, "employee@alpha-dev.test");
+    } else {
+      await setDevCookies(context, "employee");
+      await page.goto("/login", { waitUntil: "domcontentloaded" });
+    }
     await expect(page).toHaveURL(/\/dashboard$/);
   });
 
@@ -52,20 +75,37 @@ test.describe("gateway redirects", () => {
     page,
     context,
   }) => {
-    await setDevCookies(context, "platform_admin");
-    await page.goto("/login", { waitUntil: "domcontentloaded" });
+    if (hasSupabase) {
+      await loginSupabase(
+        page,
+        "platform@intranet-dev.test",
+        /\/plataforma\/dashboard$/,
+      );
+    } else {
+      await setDevCookies(context, "platform_admin");
+      await page.goto("/login", { waitUntil: "domcontentloaded" });
+    }
     await expect(page).toHaveURL(/\/plataforma\/dashboard$/);
   });
 
-  test("GET /plataforma → /plataforma/dashboard", async ({ page }) => {
+  test("GET /plataforma unauthenticated → login", async ({ page }) => {
+    await page.goto("/plataforma", { waitUntil: "domcontentloaded" });
+    await expect(page).toHaveURL(/\/login/);
+  });
+
+  test("GET /plataforma authenticated → /plataforma/dashboard", async ({
+    page,
+    context,
+  }) => {
+    await authenticateAs(page, context, "platform_admin", setDevCookies);
     await page.goto("/plataforma", { waitUntil: "domcontentloaded" });
     await expect(page).toHaveURL(/\/plataforma\/dashboard$/);
   });
 });
 
 test.describe("tenant routes", () => {
-  test.beforeEach(async ({ context }) => {
-    await setDevCookies(context, "employee");
+  test.beforeEach(async ({ page, context }) => {
+    await authenticateAs(page, context, "employee", setDevCookies);
   });
 
   test("dashboard has tenant shell", async ({ page }) => {
@@ -134,8 +174,8 @@ test.describe("public routes", () => {
 });
 
 test.describe("platform shell", () => {
-  test.beforeEach(async ({ context }) => {
-    await setDevCookies(context, "platform_admin");
+  test.beforeEach(async ({ page, context }) => {
+    await authenticateAs(page, context, "platform_admin", setDevCookies);
   });
 
   test("platform dashboard has platform shell without tenant links", async ({
@@ -151,9 +191,9 @@ test.describe("platform shell", () => {
 });
 
 test.describe("menu by role", () => {
-  for (const role of ["hr", "manager", "employee"] as const) {
+  for (const role of ["hr", "employee"] as const) {
     test(`${role} sidebar without configuracao`, async ({ page, context }) => {
-      await setDevCookies(context, role);
+      await authenticateAs(page, context, role, setDevCookies);
       await page.goto("/dashboard");
       await expect(
         page.getByRole("link", { name: "Configuração" }),
@@ -161,16 +201,28 @@ test.describe("menu by role", () => {
     });
   }
 
+  test.describe("manager menu (dev-session only)", () => {
+    test.skip(hasSupabase, "No manager seed user in Supabase");
+
+    test("manager sidebar without configuracao", async ({ page, context }) => {
+      await setDevCookies(context, "manager");
+      await page.goto("/dashboard");
+      await expect(
+        page.getByRole("link", { name: "Configuração" }),
+      ).toHaveCount(0);
+    });
+  });
+
   test("tenant_admin sees configuracao", async ({ page, context }) => {
-    await setDevCookies(context, "tenant_admin");
+    await authenticateAs(page, context, "tenant_admin", setDevCookies);
     await page.goto("/dashboard");
     await expect(page.getByRole("link", { name: "Configuração" })).toBeVisible();
   });
 });
 
 test.describe("theme", () => {
-  test.beforeEach(async ({ context }) => {
-    await setDevCookies(context, "employee");
+  test.beforeEach(async ({ page, context }) => {
+    await authenticateAs(page, context, "employee", setDevCookies);
   });
 
   test("dark theme persists after reload", async ({ page }) => {
@@ -184,8 +236,8 @@ test.describe("theme", () => {
 });
 
 test.describe("ui states dev page", () => {
-  test.beforeEach(async ({ context }) => {
-    await setDevCookies(context, "employee");
+  test.beforeEach(async ({ page, context }) => {
+    await authenticateAs(page, context, "employee", setDevCookies);
   });
 
   test("dev ui-states exposes all markers", async ({ page }) => {
@@ -208,11 +260,15 @@ test.describe("production guards", () => {
     await expect(page).toHaveURL(/\/login$/);
   });
 
-  test("tenant cookie cannot access platform dashboard", async ({
+  test("tenant session cannot access platform dashboard", async ({
     page,
     context,
   }) => {
-    await setDevCookies(context, "employee");
+    if (hasSupabase) {
+      await loginSupabase(page, "employee@alpha-dev.test");
+    } else {
+      await setDevCookies(context, "employee");
+    }
     await page.goto("/plataforma/dashboard");
     await expect(page).toHaveURL(/\/login(\?.*)?$/);
   });

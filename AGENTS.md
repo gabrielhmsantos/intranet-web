@@ -55,7 +55,17 @@ pnpm lint     # ESLint
 pnpm start    # servidor após build
 ```
 
-Variáveis em `.env` (não versionado): URL do Supabase, chave anon, chaves só servidor conforme [docs/SECURITY.md](../../docs/SECURITY.md).
+Variáveis em `apps/web/.env.local` (não versionado; ver `.env.local.example`):
+
+| Variável | Obrigatória (EP-2) | Uso |
+|----------|:------------------:|-----|
+| `NEXT_PUBLIC_SUPABASE_URL` | sim | Cliente browser + servidor |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | sim | Sessão utilizador (RLS) |
+| `SUPABASE_SERVICE_ROLE_KEY` | sim (servidor) | Convites, Auth Admin — **nunca** no cliente |
+
+Sem estas variáveis, o modo **demo** EP-1 (`dev_auth` / selector de perfil) permanece em development.
+
+Migração `invite_tokens`: coordenar `npx supabase db push` com a equipa antes de aplicar em cloud partilhado.
 
 ## Verificação antes de concluir
 

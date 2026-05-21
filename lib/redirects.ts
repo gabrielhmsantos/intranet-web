@@ -1,7 +1,13 @@
+import type { ServerSession } from "@/lib/session";
 import type { DevSession } from "@/lib/dev-session";
 import { isPlatformAdmin } from "@/lib/roles";
 
-export function getGatewayRedirect(session: DevSession): string {
+type SessionLike = Pick<
+  DevSession | ServerSession,
+  "isAuthenticated" | "role"
+>;
+
+export function getGatewayRedirect(session: SessionLike): string {
   if (!session.isAuthenticated) {
     return "/login";
   }
@@ -11,6 +17,6 @@ export function getGatewayRedirect(session: DevSession): string {
   return "/dashboard";
 }
 
-export function getAuthenticatedLoginRedirect(session: DevSession): string {
+export function getAuthenticatedLoginRedirect(session: SessionLike): string {
   return getGatewayRedirect(session);
 }

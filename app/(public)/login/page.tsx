@@ -1,7 +1,10 @@
 import { redirect } from "next/navigation";
-import { getDevSession } from "@/lib/dev-session";
+import { getServerSession } from "@/lib/session";
 import { getAuthenticatedLoginRedirect } from "@/lib/redirects";
 import { isPlatformAdmin } from "@/lib/roles";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { LoginForm } from "@/components/auth/login-form";
+import { LoginHelp } from "@/components/auth/login-help";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -25,14 +28,14 @@ async function enterAsEmployee() {
 }
 
 type PageProps = {
-  searchParams: Promise<{ denied?: string }>;
+  searchParams: Promise<{ denied?: string; sessao?: string; redirect?: string }>;
 };
 
 export default async function LoginPage({ searchParams }: PageProps) {
-  const { denied } = await searchParams;
-  const session = await getDevSession();
+  const params = await searchParams;
+  const session = await getServerSession();
   const blockedRedirect =
-    denied === "platform" &&
+    params.denied === "platform" &&
     session.isAuthenticated &&
     !isPlatformAdmin(session.role);
 
@@ -40,41 +43,55 @@ export default async function LoginPage({ searchParams }: PageProps) {
     redirect(getAuthenticatedLoginRedirect(session));
   }
 
+  const supabaseReady = isSupabaseConfigured();
+  const sessaoExpirada = params.sessao === "expirada";
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Entrar na intranet</CardTitle>
         <CardDescription>
-          Acesso por convite da sua empresa. Autenticação real no EP-2.
+          Acesso por convite da sua empresa. Sem registo público.
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <form action={enterAsEmployee} className="flex flex-col gap-4">
-          <FieldGroup>
-            <Field>
-              <FieldLabel htmlFor="email">E-mail</FieldLabel>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="username"
-                placeholder="nome@empresa.pt"
-                disabled
-              />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="password">Palavra-passe</FieldLabel>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                disabled
-              />
-            </Field>
-          </FieldGroup>
-          <Button type="submit">Continuar (demo)</Button>
-        </form>
+      <CardContent className="flex flex-col gap-6">
+        {supabaseReady ? (
+          <LoginForm
+            redirect={params.redirect}
+            sessaoExpirada={sessaoExpirada}
+          />
+        ) : (
+          <form action={enterAsEmployee} className="flex flex-col gap-4">
+            <FieldGroup>
+              <Field>
+                <FieldLabel htmlFor="email">E-mail</FieldLabel>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="username"
+                  placeholder="nome@empresa.pt"
+                  disabled
+                />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="password">Palavra-passe</FieldLabel>
+                <Input
+                  id="password"
+                  name="password"
+                  type="password"
+                  autoComplete="current-password"
+                  disabled
+                />
+              </Field>
+            </FieldGroup>
+            <Button type="submit">Continuar (demo)</Button>
+            <p className="text-xs text-muted-foreground">
+              Configure Supabase em `.env.local` para autenticação real (EP-2).
+            </p>
+          </form>
+        )}
+        <LoginHelp />
       </CardContent>
     </Card>
   );

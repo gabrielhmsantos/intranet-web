@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,12 +11,18 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ThemeMenuItems } from "@/components/shell/theme-menu";
+import { signOut } from "@/app/actions/auth";
 import { clearDevSession } from "@/app/actions/dev-session";
+import { useRouter } from "next/navigation";
 
-export function UserMenu() {
+type UserMenuProps = {
+  useSupabaseAuth?: boolean;
+};
+
+export function UserMenu({ useSupabaseAuth = false }: UserMenuProps) {
   const router = useRouter();
 
-  async function handleLogout() {
+  async function handleDevLogout() {
     await clearDevSession();
     router.push("/login");
     router.refresh();
@@ -45,9 +50,19 @@ export function UserMenu() {
         <DropdownMenuSeparator />
         <ThemeMenuItems />
         <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={handleLogout}>
-          Terminar sessão
-        </DropdownMenuItem>
+        {useSupabaseAuth ? (
+          <DropdownMenuItem asChild>
+            <form action={signOut} className="w-full">
+              <button type="submit" className="w-full text-left">
+                Terminar sessão
+              </button>
+            </form>
+          </DropdownMenuItem>
+        ) : (
+          <DropdownMenuItem onSelect={handleDevLogout}>
+            Terminar sessão
+          </DropdownMenuItem>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

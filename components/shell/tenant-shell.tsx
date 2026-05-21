@@ -23,10 +23,16 @@ import type { ProductRole } from "@/lib/roles";
 type TenantShellProps = {
   tenantName: string;
   role: ProductRole;
+  useSupabaseAuth?: boolean;
   children: React.ReactNode;
 };
 
-export function TenantShell({ tenantName, role, children }: TenantShellProps) {
+export function TenantShell({
+  tenantName,
+  role,
+  useSupabaseAuth = false,
+  children,
+}: TenantShellProps) {
   return (
     <SidebarProvider data-testid="tenant-shell">
       <Sidebar collapsible="icon">
@@ -61,7 +67,7 @@ export function TenantShell({ tenantName, role, children }: TenantShellProps) {
                   <HugeiconsIcon icon={Notification01Icon} strokeWidth={2} />
                 </Link>
               </Button>
-              <UserMenu />
+              <UserMenu useSupabaseAuth={useSupabaseAuth} />
             </div>
           </div>
         </header>
