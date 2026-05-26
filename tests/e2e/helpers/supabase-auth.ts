@@ -8,11 +8,12 @@ export const hasSupabase =
   Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
 const SEED_EMAIL: Record<
-  "employee" | "hr" | "tenant_admin" | "platform_admin",
+  "employee" | "hr" | "manager" | "tenant_admin" | "platform_admin",
   string
 > = {
   employee: "employee@alpha-dev.test",
   hr: "hr@alpha-dev.test",
+  manager: "manager@alpha-dev.test",
   tenant_admin: "admin@alpha-dev.test",
   platform_admin: "platform@intranet-dev.test",
 };

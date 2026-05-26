@@ -67,6 +67,25 @@ Sem estas variáveis, o modo **demo** EP-1 (`dev_auth` / selector de perfil) per
 
 Migração `invite_tokens`: coordenar `npx supabase db push` com a equipa antes de aplicar em cloud partilhado.
 
+## EP-3 — Colaboradores e organograma
+
+Rotas BFF (sessão + RLS; autorização em `lib/people-roles.ts`):
+
+| Rota | Métodos | Papéis mutação |
+|------|---------|----------------|
+| `/api/employees` | GET, POST | POST: `tenant_admin`, `hr` |
+| `/api/employees/[id]` | GET, PATCH | PATCH: `tenant_admin`, `hr` |
+| `/api/employees/[id]/deactivate` | POST | `tenant_admin`, `hr` |
+| `/api/employees/[id]/reactivate` | POST | `tenant_admin`, `hr` |
+| `/api/departments` | GET, POST | POST: `tenant_admin`, `hr` |
+| `/api/departments/[id]` | PATCH, DELETE | `tenant_admin`, `hr` |
+
+- Lista/ficha: colaboradores **activos** visíveis a todos os papéis tenant; **inactivos** só `tenant_admin`/`hr` (RLS + BFF → 404 para outros).
+- Organograma (`/organograma`): leitura para `employee`/`manager`; «Gerir departamentos» só RH/admin.
+- `platform_admin` redireccionado para área plataforma — fora do escopo EP-3 tenant.
+- Convites: reutilizar `POST /api/invites` (EP-2); rejeita colaborador `inactive`.
+- Dados organograma: RSC via `lib/org-chart/load-org-chart.ts` (sem rota pública `/api/org-chart`).
+
 ## Verificação antes de concluir
 
 - [ ] `pnpm lint` e `pnpm build` sem erros.

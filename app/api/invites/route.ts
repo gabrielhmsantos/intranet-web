@@ -50,13 +50,20 @@ export async function POST(request: Request) {
 
   const { data: employee, error: employeeError } = await admin
     .from("employees")
-    .select("id, tenant_id, work_email, user_id")
+    .select("id, tenant_id, work_email, user_id, status")
     .eq("id", body.employeeId)
     .eq("tenant_id", membership.tenant_id)
     .maybeSingle();
 
   if (employeeError || !employee) {
     return NextResponse.json({ error: "Não encontrado." }, { status: 404 });
+  }
+
+  if (employee.status === "inactive") {
+    return NextResponse.json(
+      { error: "Colaborador desactivado." },
+      { status: 409 },
+    );
   }
 
   if (employee.user_id) {
