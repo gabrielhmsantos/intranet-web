@@ -8,6 +8,7 @@ import {
   createEmployeeBodySchema,
   listEmployeesQuerySchema,
 } from "@/lib/employees/schemas";
+import { enrichEmployeeListDisplayNames } from "@/lib/employees/list-display-names";
 import {
   createEmployee,
   listEmployees,
@@ -52,6 +53,8 @@ export async function GET(request: Request) {
     session.role,
     parsed.data,
   );
+
+  result.items = await enrichEmployeeListDisplayNames(result.items);
 
   return NextResponse.json(result);
 }

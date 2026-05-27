@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { INTRANET_DISPLAY_NAME_KEY } from "@/lib/profile/display-name";
 import { validatePassword } from "@/lib/password-policy";
 import {
   findInviteByRawToken,
@@ -50,7 +51,7 @@ export async function POST(request: Request, context: RouteContext) {
 
   const { data: employee, error: employeeError } = await admin
     .from("employees")
-    .select("id, work_email, user_id")
+    .select("id, work_email, user_id, display_name")
     .eq("id", invite!.employee_id)
     .maybeSingle();
 
@@ -60,11 +61,16 @@ export async function POST(request: Request, context: RouteContext) {
 
   const email = employee.work_email.trim();
 
+  const cadastroName = employee.display_name?.trim() ?? "";
+
   const { data: created, error: createError } =
     await admin.auth.admin.createUser({
       email,
       password: body.password,
       email_confirm: true,
+      user_metadata: cadastroName
+        ? { [INTRANET_DISPLAY_NAME_KEY]: cadastroName }
+        : undefined,
     });
 
   if (createError || !created.user) {

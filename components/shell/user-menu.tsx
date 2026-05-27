@@ -17,9 +17,15 @@ import { useRouter } from "next/navigation";
 
 type UserMenuProps = {
   useSupabaseAuth?: boolean;
+  displayName?: string;
+  initials?: string;
 };
 
-export function UserMenu({ useSupabaseAuth = false }: UserMenuProps) {
+export function UserMenu({
+  useSupabaseAuth = false,
+  displayName = "Utilizador",
+  initials = "U",
+}: UserMenuProps) {
   const router = useRouter();
 
   async function handleDevLogout() {
@@ -39,13 +45,18 @@ export function UserMenu({ useSupabaseAuth = false }: UserMenuProps) {
           data-testid="user-menu-trigger"
         >
           <Avatar className="size-8">
-            <AvatarFallback>U</AvatarFallback>
+            <AvatarFallback data-testid="user-menu-initials">{initials}</AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
         <DropdownMenuItem asChild>
-          <Link href="/perfil">Perfil</Link>
+          <Link href="/perfil">
+            <span className="flex flex-col gap-0.5">
+              <span>{displayName}</span>
+              <span className="text-xs text-muted-foreground">Perfil</span>
+            </span>
+          </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <ThemeMenuItems />

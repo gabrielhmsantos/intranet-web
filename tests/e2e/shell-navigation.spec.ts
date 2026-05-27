@@ -112,6 +112,10 @@ test.describe("tenant routes", () => {
     await page.goto("/dashboard");
     await expect(page.getByTestId("tenant-shell")).toBeVisible();
     await expect(page.getByTestId("tenant-nav-active")).toBeVisible();
+    await expect(page.getByText(/conteúdo real nos próximos épicos/i)).toHaveCount(0);
+    await expect(
+      page.getByTestId("employee-dashboard").or(page.getByTestId("hr-dashboard")),
+    ).toBeVisible();
   });
 
   test("colaboradores and perfil respond 200 with tenant shell", async ({
@@ -121,6 +125,11 @@ test.describe("tenant routes", () => {
     await expect(page.getByTestId("tenant-shell")).toBeVisible();
     await page.goto("/perfil");
     await expect(page.getByTestId("tenant-shell")).toBeVisible();
+    await expect(
+      page
+        .getByTestId("profile-form")
+        .or(page.getByText(/Configure Supabase para editar o perfil/i)),
+    ).toBeVisible();
   });
 
   test("notificações acessível com sessão tenant", async ({ page }) => {

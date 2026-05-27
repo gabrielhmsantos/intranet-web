@@ -20,14 +20,23 @@ import type { ProductRole } from "@/lib/roles";
 type TenantShellProps = {
   tenantName: string;
   role: ProductRole;
+  displayName?: string;
   timeZone?: string;
   useSupabaseAuth?: boolean;
   children: React.ReactNode;
 };
 
+function initialsFromName(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "U";
+  if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase();
+  return `${parts[0]![0] ?? ""}${parts[parts.length - 1]![0] ?? ""}`.toUpperCase();
+}
+
 export function TenantShell({
   tenantName,
   role,
+  displayName = "Utilizador",
   timeZone = "Europe/Lisbon",
   useSupabaseAuth = false,
   children,
@@ -57,7 +66,11 @@ export function TenantShell({
                 <DevRoleSwitcher currentRole={role} />
               ) : null}
               <NotificationBell timeZone={timeZone} />
-              <UserMenu useSupabaseAuth={useSupabaseAuth} />
+              <UserMenu
+                useSupabaseAuth={useSupabaseAuth}
+                displayName={displayName}
+                initials={initialsFromName(displayName)}
+              />
             </div>
           </div>
         </header>

@@ -27,6 +27,7 @@ export default async function TenantLayout({
     <TenantShell
       tenantName={session.tenantName}
       role={role}
+      displayName={session.displayName}
       timeZone={timeZone}
       useSupabaseAuth={isSupabaseConfigured()}
     >

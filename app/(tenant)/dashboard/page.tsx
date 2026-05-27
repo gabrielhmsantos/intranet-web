@@ -1,16 +1,38 @@
-import { PlaceholderPage } from "@/components/shell/placeholder-page";
-import { FeedbackDemo } from "@/components/demo/feedback-demo";
+import { EmployeeDashboard } from "@/components/dashboard/employee-dashboard";
+import { HrDashboard } from "@/components/dashboard/hr-dashboard";
+import { getTenantTimezone } from "@/lib/events/timezone";
+import { getEffectiveTenantRole } from "@/lib/dev-session";
+import { getServerSession } from "@/lib/session";
+import { createClient } from "@/lib/supabase/server";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 export const metadata = { title: "Início" };
 
-export default function DashboardPage() {
-  return (
-    <div className="flex flex-col gap-6">
-      <PlaceholderPage
-        title="Início"
-        description="Resumo da área do colaborador — conteúdo real nos próximos épicos."
-      />
-      {process.env.NODE_ENV === "development" ? <FeedbackDemo /> : null}
-    </div>
-  );
+function isHrDashboardRole(role: string) {
+  return role === "hr" || role === "tenant_admin";
+}
+
+export default async function DashboardPage() {
+  if (!isSupabaseConfigured()) {
+    return (
+      <p className="text-muted-foreground">
+        Configure Supabase para ver o Início com dados reais.
+      </p>
+    );
+  }
+
+  const session = await getServerSession();
+  const role = session.isAuthenticated ? session.role : await getEffectiveTenantRole();
+
+  let timeZone = "Europe/Lisbon";
+  if (session.tenantId) {
+    const supabase = await createClient();
+    timeZone = await getTenantTimezone(supabase, session.tenantId);
+  }
+
+  if (isHrDashboardRole(role)) {
+    return <HrDashboard timeZone={timeZone} />;
+  }
+
+  return <EmployeeDashboard timeZone={timeZone} />;
 }

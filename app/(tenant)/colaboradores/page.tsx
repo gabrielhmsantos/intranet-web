@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { EmployeeList } from "@/components/employees/employee-list";
+import { enrichEmployeeListDisplayNames } from "@/lib/employees/list-display-names";
 import { listEmployees } from "@/lib/employees/repository";
 import {
   canListInactive,
@@ -32,6 +33,7 @@ export default async function ColaboradoresPage() {
     pageSize: 20,
     includeInactive: false,
   });
+  initial.items = await enrichEmployeeListDisplayNames(initial.items);
 
   return (
     <EmployeeList

@@ -66,14 +66,16 @@ export async function listNotifications(
 export async function previewNotifications(
   supabase: SupabaseClient,
   timeZone: string,
+  options?: { limit?: number },
 ): Promise<NotificationRow[]> {
+  const limit = options?.limit ?? 8;
   const cutoff = cutoff90dIso(timeZone);
   const { data, error } = await supabase
     .from("notifications")
     .select(SELECT_COLUMNS)
     .gte("created_at", cutoff)
     .order("created_at", { ascending: false })
-    .limit(8);
+    .limit(limit);
 
   mapAuthError(error);
   if (error) throw new Error(error.message);

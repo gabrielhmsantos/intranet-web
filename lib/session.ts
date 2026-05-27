@@ -1,4 +1,5 @@
 import { getDevSession, normalizeDevRole } from "@/lib/dev-session";
+import { resolveDisplayName } from "@/lib/profile/display-name";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 import type { ProductRole } from "@/lib/roles";
@@ -8,6 +9,7 @@ export type ServerSession = {
   isAuthenticated: boolean;
   userId: string | null;
   email: string | null;
+  displayName: string;
   tenantId: string | null;
   tenantName: string;
   role: ProductRole;
@@ -19,6 +21,7 @@ const UNAUTHENTICATED: ServerSession = {
   isAuthenticated: false,
   userId: null,
   email: null,
+  displayName: "Utilizador",
   tenantId: null,
   tenantName: "Intranet",
   role: "employee",
@@ -33,6 +36,7 @@ export async function getServerSession(): Promise<ServerSession> {
       isAuthenticated: dev.isAuthenticated,
       userId: null,
       email: null,
+      displayName: dev.tenantDisplayName,
       tenantId: null,
       tenantName: dev.tenantDisplayName,
       role: dev.role,
@@ -67,10 +71,23 @@ export async function getServerSession(): Promise<ServerSession> {
   const tenant = Array.isArray(tenants) ? tenants[0] : tenants;
   const role = normalizeDevRole(membership.role as string);
 
+  const { data: employee } = await supabase
+    .from("employees")
+    .select("display_name")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  const displayName = resolveDisplayName(
+    user.user_metadata as Record<string, unknown> | undefined,
+    employee?.display_name ?? null,
+    user.email ?? null,
+  );
+
   return {
     isAuthenticated: true,
     userId: user.id,
     email: user.email ?? null,
+    displayName,
     tenantId: membership.tenant_id,
     tenantName: tenant?.name ?? "Intranet",
     role,
