@@ -7,6 +7,7 @@ import {
   findInviteByRawToken,
   isInviteTokenValid,
 } from "@/lib/invite-repository";
+import { authUserExistsByEmail } from "@/lib/platform/provision-tenant";
 
 const bodySchema = z.object({
   password: z.string(),
@@ -49,10 +50,64 @@ export async function POST(request: Request, context: RouteContext) {
 
   const admin = createAdminClient();
 
+  if (invite!.kind === "bootstrap") {
+    const email = invite!.bootstrap_email?.trim();
+    if (!email) {
+      return NextResponse.json({ valid: false });
+    }
+
+    if (await authUserExistsByEmail(email)) {
+      return NextResponse.json({ valid: false });
+    }
+
+    const { data: created, error: createError } =
+      await admin.auth.admin.createUser({
+        email,
+        password: body.password,
+        email_confirm: true,
+      });
+
+    if (createError || !created.user) {
+      return NextResponse.json({ valid: false });
+    }
+
+    const userId = created.user.id;
+
+    const { error: membershipError } = await admin
+      .from("tenant_memberships")
+      .insert({
+        tenant_id: invite!.tenant_id,
+        user_id: userId,
+        role: "tenant_admin",
+      });
+
+    if (membershipError) {
+      await admin.auth.admin.deleteUser(userId);
+      return NextResponse.json({ valid: false });
+    }
+
+    const { data: consumed, error: consumeError } = await admin
+      .from("invite_tokens")
+      .update({
+        status: "consumed",
+        consumed_at: new Date().toISOString(),
+      })
+      .eq("id", invite!.id)
+      .eq("status", "pending")
+      .select("id")
+      .maybeSingle();
+
+    if (consumeError || !consumed) {
+      return NextResponse.json({ valid: false });
+    }
+
+    return NextResponse.json({ success: true });
+  }
+
   const { data: employee, error: employeeError } = await admin
     .from("employees")
     .select("id, work_email, user_id, display_name")
-    .eq("id", invite!.employee_id)
+    .eq("id", invite!.employee_id!)
     .maybeSingle();
 
   if (employeeError || !employee?.work_email || employee.user_id) {
@@ -60,6 +115,10 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   const email = employee.work_email.trim();
+
+  if (await authUserExistsByEmail(email)) {
+    return NextResponse.json({ valid: false });
+  }
 
   const cadastroName = employee.display_name?.trim() ?? "";
 

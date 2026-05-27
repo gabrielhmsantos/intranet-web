@@ -26,10 +26,14 @@ export function isInviteExpired(expiresAt: string | Date): boolean {
   return expiry.getTime() <= Date.now();
 }
 
+export type InviteKind = "employee" | "bootstrap";
+
 export type InviteRow = {
   id: string;
   tenant_id: string;
-  employee_id: string;
+  kind: InviteKind;
+  employee_id: string | null;
+  bootstrap_email: string | null;
   token_hash: string;
   status: "pending" | "consumed" | "expired" | "revoked";
   expires_at: string;

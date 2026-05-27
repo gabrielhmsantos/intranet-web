@@ -102,6 +102,22 @@ Rotas BFF (sessão + RLS; autorização em `lib/events/roles.ts`):
 - Lembretes agendados e bandeja completa: **EP-5** (`notification-service`).
 - Migração: `supabase/migrations/20260526120000_ep4_internal_events.sql` — coordenar `db push` com a equipa.
 
+## EP-7 — Administração da plataforma
+
+Rotas BFF (`requirePlatformAdmin()` em `lib/platform/require-platform-admin.ts`; agregação cross-tenant só com `service_role`):
+
+| Rota | Métodos | Notas |
+|------|---------|-------|
+| `/api/platform/tenants/summary` | GET | Dashboard agregados (sem PII) |
+| `/api/platform/tenants` | POST | Provisionamento + token `bootstrap` |
+| `/api/platform/invites/expired` | GET | Lista bootstrap expirados (com email) |
+| `/api/platform/invites/[inviteId]/renew` | POST | Novo link 7 dias |
+| `/api/platform/invites/[inviteId]/delete` | POST | FR-019 — só tenant órfão |
+
+- UI: `/plataforma/dashboard`, `/plataforma/tenants/novo`, `/plataforma/convites-expirados`.
+- Activar bootstrap: ramo em `/api/invites/[token]/validate` e `activate` (`kind=bootstrap`).
+- Migração: `supabase/migrations/20260527140000_ep7_platform_admin.sql` — coordenar `db push` com a equipa.
+
 ## Verificação antes de concluir
 
 - [ ] `pnpm lint` e `pnpm build` sem erros.

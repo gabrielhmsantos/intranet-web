@@ -92,7 +92,9 @@ export async function POST(request: Request) {
 
   const { error: insertError } = await admin.from("invite_tokens").insert({
     tenant_id: membership.tenant_id,
+    kind: "employee",
     employee_id: employee.id,
+    bootstrap_email: null,
     token_hash: hash,
     status: "pending",
     expires_at: expiresAt.toISOString(),

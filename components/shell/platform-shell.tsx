@@ -21,12 +21,27 @@ export function PlatformShell({
           <span className="text-xs text-muted-foreground">
             Administração da plataforma
           </span>
-          <nav aria-label="Navegação da plataforma">
+          <nav
+            aria-label="Navegação da plataforma"
+            className="flex flex-wrap items-center gap-4"
+          >
             <Link
               href="/plataforma/dashboard"
               className="text-sm font-medium hover:underline"
             >
               Dashboard
+            </Link>
+            <Link
+              href="/plataforma/tenants/novo"
+              className="text-sm font-medium hover:underline"
+            >
+              Nova empresa
+            </Link>
+            <Link
+              href="/plataforma/convites-expirados"
+              className="text-sm font-medium hover:underline"
+            >
+              Convites expirados
             </Link>
           </nav>
         </div>
