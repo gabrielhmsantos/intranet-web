@@ -1,8 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { Notification01Icon } from "@hugeicons/core-free-icons";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 import {
   Sidebar,
   SidebarContent,
@@ -14,7 +12,6 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
-import { Button } from "@/components/ui/button";
 import { TenantNav } from "@/components/nav/tenant-nav";
 import { UserMenu } from "@/components/shell/user-menu";
 import { DevRoleSwitcher } from "@/components/dev/dev-role-switcher";
@@ -23,6 +20,7 @@ import type { ProductRole } from "@/lib/roles";
 type TenantShellProps = {
   tenantName: string;
   role: ProductRole;
+  timeZone?: string;
   useSupabaseAuth?: boolean;
   children: React.ReactNode;
 };
@@ -30,6 +28,7 @@ type TenantShellProps = {
 export function TenantShell({
   tenantName,
   role,
+  timeZone = "Europe/Lisbon",
   useSupabaseAuth = false,
   children,
 }: TenantShellProps) {
@@ -57,16 +56,7 @@ export function TenantShell({
               {process.env.NODE_ENV === "development" ? (
                 <DevRoleSwitcher currentRole={role} />
               ) : null}
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label="Notificações"
-                asChild
-              >
-                <Link href="/notificacoes">
-                  <HugeiconsIcon icon={Notification01Icon} strokeWidth={2} />
-                </Link>
-              </Button>
+              <NotificationBell timeZone={timeZone} />
               <UserMenu useSupabaseAuth={useSupabaseAuth} />
             </div>
           </div>

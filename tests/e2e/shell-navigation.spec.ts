@@ -123,6 +123,13 @@ test.describe("tenant routes", () => {
     await expect(page.getByTestId("tenant-shell")).toBeVisible();
   });
 
+  test("notificações acessível com sessão tenant", async ({ page }) => {
+    test.skip(!hasSupabase, "Requer Supabase");
+    await page.goto("/notificacoes");
+    await expect(page.getByTestId("tenant-shell")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Notificações" })).toBeVisible();
+  });
+
   test("nav active updates on route change", async ({ page }) => {
     await page.goto("/dashboard");
     await expect(page.getByTestId("tenant-nav-active")).toHaveAttribute(
