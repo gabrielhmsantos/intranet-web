@@ -36,6 +36,7 @@ describe("GET /api/events", () => {
       email: "e@test",
       displayName: "Employee",
       tenantName: "Alpha",
+      employeeId: null,
       isPlatformAdmin: false,
       source: "supabase",
     });
@@ -73,7 +74,7 @@ describe("GET /api/events", () => {
 });
 
 describe("POST /api/events", () => {
-  it("returns 403 for manager", async () => {
+  it("returns 422 for manager without employee link", async () => {
     vi.mocked(getServerSession).mockResolvedValue({
       isAuthenticated: true,
       tenantId: "t1",
@@ -82,6 +83,7 @@ describe("POST /api/events", () => {
       email: "m@test",
       displayName: "Manager",
       tenantName: "Alpha",
+      employeeId: null,
       isPlatformAdmin: false,
       source: "supabase",
     });
@@ -92,6 +94,6 @@ describe("POST /api/events", () => {
         body: JSON.stringify({}),
       }),
     );
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(422);
   });
 });

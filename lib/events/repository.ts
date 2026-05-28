@@ -52,6 +52,7 @@ type EventRow = {
   ends_at: string;
   audience_type: "company" | "department" | "employees";
   audience_department_id: string | null;
+  created_by_employee_id: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -122,7 +123,7 @@ export async function getEventById(
   const { data, error } = await supabase
     .from("events")
     .select(
-      "id, tenant_id, status, title, description, location, starts_at, ends_at, audience_type, audience_department_id, created_at, updated_at",
+      "id, tenant_id, status, title, description, location, starts_at, ends_at, audience_type, audience_department_id, created_by_employee_id, created_at, updated_at",
     )
     .eq("tenant_id", tenantId)
     .eq("id", eventId)
@@ -148,6 +149,7 @@ export async function getEventById(
     endsAt: row.ends_at,
     status: row.status,
     audience,
+    createdByEmployeeId: row.created_by_employee_id,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -184,10 +186,15 @@ function audienceDbFields(audience: CreateEventBody["audience"]) {
   };
 }
 
+export type CreateEventOptions = {
+  createdByEmployeeId?: string | null;
+};
+
 export async function createEvent(
   supabase: SupabaseClient,
   tenantId: string,
   body: CreateEventBody,
+  options?: CreateEventOptions,
 ): Promise<EventDetail> {
   const timeZone = await getTenantTimezone(supabase, tenantId);
   const startsAt = tenantLocalInputToUtcIso(body.startsAt, timeZone);
@@ -203,6 +210,9 @@ export async function createEvent(
       starts_at: startsAt,
       ends_at: endsAt,
       ...audienceDbFields(body.audience),
+      ...(options?.createdByEmployeeId
+        ? { created_by_employee_id: options.createdByEmployeeId }
+        : {}),
     })
     .select("id")
     .single();

@@ -88,6 +88,31 @@ export const updateEventBodySchema = eventBodyFieldsSchema
   .partial()
   .superRefine(refineEventDates);
 
+export const managerCreateEventBodySchema = createEventBodySchema.superRefine(
+  (value, ctx) => {
+    if (value.audience.type === "company") {
+      ctx.addIssue({
+        code: "custom",
+        message: "Gestores não podem criar eventos para toda a empresa.",
+        path: ["audience", "type"],
+      });
+    }
+  },
+);
+
+export const limitedAuthorUpdateBodySchema = z
+  .object({
+    title: z.string().trim().min(1, "Título obrigatório.").optional(),
+    description: z
+      .string()
+      .trim()
+      .optional()
+      .or(z.literal("").transform(() => undefined)),
+  })
+  .refine((v) => v.title !== undefined || v.description !== undefined, {
+    message: "Nenhum campo para actualizar.",
+  });
+
 export type ListEventsQuery = z.infer<typeof listEventsQuerySchema>;
 export type CreateEventBody = z.infer<typeof createEventBodySchema>;
 export type UpdateEventBody = z.infer<typeof updateEventBodySchema>;

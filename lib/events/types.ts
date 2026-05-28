@@ -35,6 +35,7 @@ export type EventDetail = {
   endsAt: string;
   status: EventStatus;
   audience: EventAudience;
+  createdByEmployeeId: string | null;
   createdAt: string;
   updatedAt: string;
 };

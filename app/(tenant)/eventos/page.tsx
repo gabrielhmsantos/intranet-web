@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { EventList } from "@/components/events/event-list";
-import { canMutateEvents } from "@/lib/events/roles";
+import { hasManagerScope, loadManagerScope } from "@/lib/events/manager-scope";
+import { canCreateEvents, canMutateEvents } from "@/lib/events/roles";
 import { listEvents } from "@/lib/events/repository";
 import { getTenantTimezone } from "@/lib/events/timezone";
 import { getServerSession } from "@/lib/session";
@@ -30,10 +31,27 @@ export default async function EventosPage() {
     pageSize: 20,
   });
 
+  let canCreate = canMutateEvents(session.role);
+
+  if (session.role === "manager" && session.employeeId) {
+    try {
+      const scope = await loadManagerScope(
+        supabase,
+        session.tenantId,
+        session.employeeId,
+      );
+      canCreate = canCreateEvents(session.role, {
+        hasManagerScope: hasManagerScope(scope),
+      });
+    } catch {
+      canCreate = false;
+    }
+  }
+
   return (
     <EventList
       initial={initial}
-      canCreate={canMutateEvents(session.role)}
+      canCreate={canCreate}
       timeZone={timeZone}
     />
   );

@@ -32,6 +32,10 @@ type EventDetailViewProps = {
   event: EventDetail;
   canEdit: boolean;
   canCancel: boolean;
+  limitedEdit?: boolean;
+  managerEditMode?: boolean;
+  managedDepartments?: { id: string; name: string }[];
+  scopedEmployees?: { id: string; fullName: string }[];
   timeZone: string;
   defaultStartsAt: string;
   defaultEndsAt: string;
@@ -41,6 +45,10 @@ export function EventDetailView({
   event,
   canEdit,
   canCancel,
+  limitedEdit = false,
+  managerEditMode = false,
+  managedDepartments,
+  scopedEmployees,
   timeZone,
   defaultStartsAt,
   defaultEndsAt,
@@ -150,6 +158,10 @@ export function EventDetailView({
             initial={event}
             defaultStartsAt={defaultStartsAt}
             defaultEndsAt={defaultEndsAt}
+            limitedEdit={limitedEdit}
+            managerMode={managerEditMode}
+            managedDepartments={managedDepartments}
+            scopedEmployees={scopedEmployees}
           />
         </DialogContent>
       </Dialog>

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   createEventBodySchema,
   listEventsQuerySchema,
+  managerCreateEventBodySchema,
 } from "@/lib/events/schemas";
 
 describe("listEventsQuerySchema", () => {
@@ -53,6 +54,11 @@ describe("createEventBodySchema", () => {
       ...base,
       audience: { type: "department" },
     });
+    expect(result.success).toBe(false);
+  });
+
+  it("managerCreateEventBodySchema rejects company audience", () => {
+    const result = managerCreateEventBodySchema.safeParse(base);
     expect(result.success).toBe(false);
   });
 });

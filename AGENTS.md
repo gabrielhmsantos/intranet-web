@@ -86,21 +86,24 @@ Rotas BFF (sessão + RLS; autorização em `lib/people-roles.ts`):
 - Convites: reutilizar `POST /api/invites` (EP-2); rejeita colaborador `inactive`.
 - Dados organograma: RSC via `lib/org-chart/load-org-chart.ts` (sem rota pública `/api/org-chart`).
 
-## EP-4 — Eventos internos
+## EP-4 / EP-9 — Eventos internos
 
-Rotas BFF (sessão + RLS; autorização em `lib/events/roles.ts`):
+Rotas BFF (sessão + RLS; autorização em `lib/events/roles.ts`, âmbito gestor em `lib/events/manager-scope.ts`):
 
 | Rota | Métodos | Papéis mutação |
 |------|---------|----------------|
-| `/api/events` | GET, POST | POST: `tenant_admin`, `hr` |
-| `/api/events/[id]` | GET, PATCH | PATCH: `tenant_admin`, `hr` |
-| `/api/events/[id]/cancel` | POST | `tenant_admin`, `hr` |
+| `/api/events` | GET, POST | POST: `tenant_admin`, `hr`; `manager` (público equipa, autor registado) |
+| `/api/events/manager-scope` | GET | `manager` (formulário: dept. geridos + colaboradores no âmbito) |
+| `/api/events/[id]` | GET, PATCH | PATCH: admin/RH todos; `manager` eventos próprios; autor ex-`manager` só título/descrição |
+| `/api/events/[id]/cancel` | POST | admin/RH; `manager` ou autor no evento próprio activo |
 | `/api/tenant/settings` | PATCH | `tenant_admin` (timezone) |
 
-- Lista/detalhe: todos os papéis tenant; gestor/colaborador **sem** criar/editar/cancelar.
-- `INSERT` em `notifications`: **apenas** BFF com `service_role` em cancelamento e alteração de data/hora; RLS nega `authenticated`.
+- Lista/detalhe: **todos** os papéis tenant (leitura global); colaborador sem mutação.
+- **Gestor** (`manager`): criar só com equipa no organograma; sem «Toda a empresa»; editar/cancelar só eventos com `created_by_employee_id` = ficha da sessão.
+- Glossário spec: «gestor» = role `manager` no código/sessão.
+- `INSERT` em `notifications`: **apenas** BFF com `service_role` em cancelamento e alteração de data/hora/local; RLS nega `authenticated`.
 - Lembretes agendados e bandeja completa: **EP-5** (`notification-service`).
-- Migração: `supabase/migrations/20260526120000_ep4_internal_events.sql` — coordenar `db push` com a equipa.
+- Migrações: `20260526120000_ep4_internal_events.sql`, `20260528120000_ep9_manager_scoped_events.sql` — coordenar `db push` com a equipa.
 
 ## EP-7 — Administração da plataforma
 

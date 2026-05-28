@@ -19,11 +19,22 @@ type EventFormProps = {
   initial?: EventDetail;
   defaultStartsAt?: string;
   defaultEndsAt?: string;
+  managerMode?: boolean;
+  limitedEdit?: boolean;
+  managedDepartments?: { id: string; name: string }[];
+  scopedEmployees?: { id: string; fullName: string }[];
 };
 
-function audienceFromDetail(event?: EventDetail): AudienceFormValue {
+function audienceFromDetail(
+  event?: EventDetail,
+  managerMode?: boolean,
+): AudienceFormValue {
   if (!event) {
-    return { type: "company", departmentId: "", employeeIds: [] };
+    return {
+      type: managerMode ? "department" : "company",
+      departmentId: "",
+      employeeIds: [],
+    };
   }
   return {
     type: event.audience.type,
@@ -38,6 +49,10 @@ export function EventForm({
   initial,
   defaultStartsAt = "",
   defaultEndsAt = "",
+  managerMode = false,
+  limitedEdit = false,
+  managedDepartments,
+  scopedEmployees,
 }: EventFormProps) {
   const router = useRouter();
   const [title, setTitle] = useState(initial?.title ?? "");
@@ -45,25 +60,35 @@ export function EventForm({
   const [location, setLocation] = useState(initial?.location ?? "");
   const [startsAt, setStartsAt] = useState(defaultStartsAt);
   const [endsAt, setEndsAt] = useState(defaultEndsAt);
-  const [audience, setAudience] = useState<AudienceFormValue>(() => audienceFromDetail(initial));
+  const [audience, setAudience] = useState<AudienceFormValue>(() =>
+    audienceFromDetail(initial, managerMode),
+  );
   const [submitting, setSubmitting] = useState(false);
+
+  const scheduleReadOnly = limitedEdit;
+  const audienceReadOnly = limitedEdit || (mode === "edit" && limitedEdit);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
 
-    const payload = {
+    const payload: Record<string, unknown> = {
       title,
       description: description || undefined,
-      location: location || undefined,
-      startsAt,
-      endsAt,
-      audience: {
-        type: audience.type,
-        departmentId: audience.type === "department" ? audience.departmentId : undefined,
-        employeeIds: audience.type === "employees" ? audience.employeeIds : undefined,
-      },
     };
+
+    if (!limitedEdit) {
+      Object.assign(payload, {
+        location: location || undefined,
+        startsAt,
+        endsAt,
+        audience: {
+          type: audience.type,
+          departmentId: audience.type === "department" ? audience.departmentId : undefined,
+          employeeIds: audience.type === "employees" ? audience.employeeIds : undefined,
+        },
+      });
+    }
 
     try {
       const url = mode === "create" ? "/api/events" : `/api/events/${eventId}`;
@@ -92,12 +117,19 @@ export function EventForm({
 
   return (
     <form onSubmit={onSubmit} className="flex max-w-xl flex-col gap-4">
-      <p className="rounded-md border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
-        Os participantes são notificados automaticamente em caso de <strong>cancelamento</strong>,{" "}
-        <strong>alteração de data/hora</strong> ou <strong>alteração de local</strong>. Lembretes
-        (dia do evento, 1 h e 15 min antes) são
-        automáticos — não é possível escolher o tipo de notificação aqui.
-      </p>
+      {!limitedEdit ? (
+        <p className="rounded-md border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
+          Os participantes são notificados automaticamente em caso de{" "}
+          <strong>cancelamento</strong>, <strong>alteração de data/hora</strong> ou{" "}
+          <strong>alteração de local</strong>. Lembretes (dia do evento, 1 h e 15 min antes) são
+          automáticos — não é possível escolher o tipo de notificação aqui.
+        </p>
+      ) : (
+        <p className="rounded-md border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
+          Pode alterar apenas o <strong>título</strong> e a <strong>descrição</strong>. Para
+          reagendar, mudar o local ou o público-alvo, contacte RH ou um gestor activo.
+        </p>
+      )}
 
       <div className="flex flex-col gap-1">
         <Label htmlFor="title">Título</Label>
@@ -109,28 +141,30 @@ export function EventForm({
         />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="flex flex-col gap-1">
-          <Label htmlFor="startsAt">Início</Label>
-          <Input
-            id="startsAt"
-            type="datetime-local"
-            required
-            value={startsAt}
-            onChange={(e) => setStartsAt(e.target.value)}
-          />
+      {!scheduleReadOnly ? (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="startsAt">Início</Label>
+            <Input
+              id="startsAt"
+              type="datetime-local"
+              required
+              value={startsAt}
+              onChange={(e) => setStartsAt(e.target.value)}
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="endsAt">Fim</Label>
+            <Input
+              id="endsAt"
+              type="datetime-local"
+              required
+              value={endsAt}
+              onChange={(e) => setEndsAt(e.target.value)}
+            />
+          </div>
         </div>
-        <div className="flex flex-col gap-1">
-          <Label htmlFor="endsAt">Fim</Label>
-          <Input
-            id="endsAt"
-            type="datetime-local"
-            required
-            value={endsAt}
-            onChange={(e) => setEndsAt(e.target.value)}
-          />
-        </div>
-      </div>
+      ) : null}
 
       <div className="flex flex-col gap-1">
         <Label htmlFor="description">Descrição</Label>
@@ -141,12 +175,22 @@ export function EventForm({
         />
       </div>
 
-      <div className="flex flex-col gap-1">
-        <Label htmlFor="location">Local</Label>
-        <Input id="location" value={location} onChange={(e) => setLocation(e.target.value)} />
-      </div>
+      {!scheduleReadOnly ? (
+        <div className="flex flex-col gap-1">
+          <Label htmlFor="location">Local</Label>
+          <Input id="location" value={location} onChange={(e) => setLocation(e.target.value)} />
+        </div>
+      ) : null}
 
-      <EventAudienceFields value={audience} onChange={setAudience} />
+      {!audienceReadOnly ? (
+        <EventAudienceFields
+          value={audience}
+          onChange={setAudience}
+          managerMode={managerMode}
+          managedDepartments={managedDepartments}
+          scopedEmployees={scopedEmployees}
+        />
+      ) : null}
 
       <div className="flex gap-2">
         <Button type="submit" disabled={submitting}>

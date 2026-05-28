@@ -32,7 +32,7 @@ export function canAccessPath(
   }
 
   if (pathname === "/eventos/novo" || pathname.startsWith("/eventos/novo/")) {
-    if (role === "manager" || role === "employee") {
+    if (role === "employee") {
       return { allowed: false, reason: "forbidden" };
     }
   }

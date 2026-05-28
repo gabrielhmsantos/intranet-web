@@ -4,10 +4,18 @@ import { getServerSession } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { assertTenantAccess, TenantAccessError } from "@/lib/tenant-context";
+import {
+  assertAudienceAllowed,
+  hasManagerScope,
+  loadManagerScope,
+  ManagerScopeError,
+} from "@/lib/events/manager-scope";
+import { canCreateEventsForSession } from "@/lib/events/mutation-access";
 import { canMutateEvents } from "@/lib/events/roles";
 import {
   createEventBodySchema,
   listEventsQuerySchema,
+  managerCreateEventBodySchema,
 } from "@/lib/events/schemas";
 import { createEvent, listEvents } from "@/lib/events/repository";
 
@@ -64,21 +72,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
   }
 
-  if (!canMutateEvents(session.role)) {
-    return NextResponse.json({ error: "Não autorizado." }, { status: 403 });
-  }
-
   let body: unknown;
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
-  }
-
-  const parsed = createEventBodySchema.safeParse(body);
-  if (!parsed.success) {
-    const message = parsed.error.issues[0]?.message ?? "Dados inválidos.";
-    return NextResponse.json({ error: message }, { status: 400 });
   }
 
   try {
@@ -91,7 +89,78 @@ export async function POST(request: Request) {
   }
 
   const supabase = await createClient();
-  const event = await createEvent(supabase, session.tenantId, parsed.data);
 
-  return NextResponse.json(event, { status: 201 });
+  if (canMutateEvents(session.role)) {
+    const parsed = createEventBodySchema.safeParse(body);
+    if (!parsed.success) {
+      const message = parsed.error.issues[0]?.message ?? "Dados inválidos.";
+      return NextResponse.json({ error: message }, { status: 400 });
+    }
+
+    const event = await createEvent(supabase, session.tenantId, parsed.data);
+    return NextResponse.json(event, { status: 201 });
+  }
+
+  if (session.role === "manager") {
+    if (!session.employeeId) {
+      return NextResponse.json(
+        {
+          error:
+            "A sua conta não está associada a uma ficha de colaborador. Contacte os Recursos Humanos.",
+        },
+        { status: 422 },
+      );
+    }
+
+    const parsed = managerCreateEventBodySchema.safeParse(body);
+    if (!parsed.success) {
+      const message = parsed.error.issues[0]?.message ?? "Dados inválidos.";
+      return NextResponse.json({ error: message }, { status: 400 });
+    }
+
+    let scope;
+    try {
+      scope = await loadManagerScope(
+        supabase,
+        session.tenantId,
+        session.employeeId,
+      );
+    } catch (e) {
+      return NextResponse.json(
+        { error: e instanceof Error ? e.message : "Erro ao carregar âmbito." },
+        { status: 500 },
+      );
+    }
+
+    if (!hasManagerScope(scope)) {
+      return NextResponse.json(
+        {
+          error:
+            "Não tem equipa configurada no organograma. Contacte os Recursos Humanos.",
+        },
+        { status: 422 },
+      );
+    }
+
+    if (!canCreateEventsForSession(session.role, scope)) {
+      return NextResponse.json({ error: "Não autorizado." }, { status: 403 });
+    }
+
+    try {
+      assertAudienceAllowed(scope, parsed.data.audience);
+    } catch (e) {
+      if (e instanceof ManagerScopeError) {
+        return NextResponse.json({ error: e.message }, { status: 403 });
+      }
+      throw e;
+    }
+
+    const event = await createEvent(supabase, session.tenantId, parsed.data, {
+      createdByEmployeeId: session.employeeId,
+    });
+
+    return NextResponse.json(event, { status: 201 });
+  }
+
+  return NextResponse.json({ error: "Não autorizado." }, { status: 403 });
 }

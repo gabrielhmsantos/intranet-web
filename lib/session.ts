@@ -13,8 +13,16 @@ export type ServerSession = {
   tenantId: string | null;
   tenantName: string;
   role: ProductRole;
+  employeeId: string | null;
   isPlatformAdmin: boolean;
   source: "supabase" | "dev";
+};
+
+/** Seed Alpha employee ids for dev_auth E2E (EP-9). */
+const DEV_EMPLOYEE_BY_ROLE: Partial<Record<ProductRole, string>> = {
+  hr: "c0000000-0000-4000-8000-000000000011",
+  employee: "c0000000-0000-4000-8000-000000000012",
+  manager: "c0000000-0000-4000-8000-000000000013",
 };
 
 const UNAUTHENTICATED: ServerSession = {
@@ -25,6 +33,7 @@ const UNAUTHENTICATED: ServerSession = {
   tenantId: null,
   tenantName: "Intranet",
   role: "employee",
+  employeeId: null,
   isPlatformAdmin: false,
   source: "dev",
 };
@@ -40,6 +49,7 @@ export async function getServerSession(): Promise<ServerSession> {
       tenantId: null,
       tenantName: dev.tenantDisplayName,
       role: dev.role,
+      employeeId: DEV_EMPLOYEE_BY_ROLE[dev.role] ?? null,
       isPlatformAdmin: isPlatformAdmin(dev.role),
       source: "dev",
     };
@@ -73,7 +83,7 @@ export async function getServerSession(): Promise<ServerSession> {
 
   const { data: employee } = await supabase
     .from("employees")
-    .select("display_name")
+    .select("id, display_name")
     .eq("user_id", user.id)
     .maybeSingle();
 
@@ -91,6 +101,7 @@ export async function getServerSession(): Promise<ServerSession> {
     tenantId: membership.tenant_id,
     tenantName: tenant?.name ?? "Intranet",
     role,
+    employeeId: (employee?.id as string | undefined) ?? null,
     isPlatformAdmin: role === "platform_admin",
     source: "supabase",
   };

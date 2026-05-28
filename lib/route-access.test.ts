@@ -36,10 +36,9 @@ describe("canAccessPath", () => {
     });
   });
 
-  it("denies manager eventos novo", () => {
+  it("allows manager eventos novo", () => {
     expect(canAccessPath("manager", "/eventos/novo", true)).toEqual({
-      allowed: false,
-      reason: "forbidden",
+      allowed: true,
     });
   });
 

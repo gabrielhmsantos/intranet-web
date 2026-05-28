@@ -1,6 +1,13 @@
 import { notFound, redirect } from "next/navigation";
 import { EventDetailView } from "@/components/events/event-detail";
-import { canCancelEvent, canEditEvent } from "@/lib/events/roles";
+import { loadManagerScope } from "@/lib/events/manager-scope";
+import {
+  canCancelEvent,
+  canEditEvent,
+  isLimitedAuthorEdit,
+  ownershipContext,
+} from "@/lib/events/mutation-access";
+import { canMutateEvents } from "@/lib/events/roles";
 import { EventNotFoundError, getEventById } from "@/lib/events/repository";
 import { getTenantTimezone, utcToTenantLocalInput } from "@/lib/events/timezone";
 import { getServerSession } from "@/lib/session";
@@ -37,11 +44,41 @@ export default async function EventoDetailPage({ params }: PageProps) {
     throw e;
   }
 
+  const ctx = ownershipContext(session.role, session.employeeId, event);
+  const canEdit = canEditEvent(ctx);
+
+  let managedDepartments: { id: string; name: string }[] | undefined;
+  let scopedEmployees: { id: string; fullName: string }[] | undefined;
+
+  if (
+    session.role === "manager" &&
+    session.employeeId &&
+    canEdit &&
+    !canMutateEvents(session.role)
+  ) {
+    try {
+      const scope = await loadManagerScope(
+        supabase,
+        session.tenantId,
+        session.employeeId,
+      );
+      managedDepartments = scope.managedDepartments;
+      scopedEmployees = scope.scopedEmployees;
+    } catch {
+      managedDepartments = [];
+      scopedEmployees = [];
+    }
+  }
+
   return (
     <EventDetailView
       event={event}
-      canEdit={canEditEvent(session.role, event.status)}
-      canCancel={canCancelEvent(session.role, event.status)}
+      canEdit={canEdit}
+      canCancel={canCancelEvent(ctx)}
+      limitedEdit={isLimitedAuthorEdit(ctx)}
+      managerEditMode={Boolean(managedDepartments)}
+      managedDepartments={managedDepartments}
+      scopedEmployees={scopedEmployees}
       timeZone={timeZone}
       defaultStartsAt={utcToTenantLocalInput(event.startsAt, timeZone)}
       defaultEndsAt={utcToTenantLocalInput(event.endsAt, timeZone)}
